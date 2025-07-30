@@ -1,28 +1,31 @@
-<script>
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 
 function resizeCanvas() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
-  updateCloudX(); // recalcular cloudX al cambiar tamaño
 }
+
 resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
 
-// Sliders
+
+let width = canvas.width = window.innerWidth;
+let height = canvas.height = window.innerHeight;
+
 const rainIntensitySlider = document.getElementById('rainIntensity');
 const evaporationSlider = document.getElementById('evaporationSpeed');
 
-// Nube
-const cloud = document.getElementById('cloud');
-let cloudX;
-const cloudWidth = 200;
+const clouds = [
+  document.getElementById('cloud1'),
+  document.getElementById('cloud2'),
+  document.getElementById('cloud3'),
+  document.getElementById('cloud4'),
+  document.getElementById('cloud5'),
+];
 
-function updateCloudX() {
-  cloudX = cloud.offsetLeft + cloud.offsetWidth / 2;
-}
-updateCloudX();
+let cloudX = width / 2;
+const cloudWidth = 2000;
 
 let drops = [];
 let puddleHeight = 0;
@@ -31,7 +34,7 @@ let vaporParticles = [];
 function createDrop() {
   return {
     x: cloudX - cloudWidth / 2 + Math.random() * cloudWidth,
-    y: cloud.offsetTop + cloud.offsetHeight,
+    y: 160,
     length: Math.random() * 20 + 10,
     speed: Math.random() * 4 + 4
   };
@@ -43,7 +46,7 @@ function updateDrops() {
     drops.push(createDrop());
   }
 
-  drops = drops.filter(drop => drop.y < canvas.height);
+  drops = drops.filter(drop => drop.y < height);
   drops.forEach(drop => {
     drop.y += drop.speed;
     ctx.beginPath();
@@ -51,14 +54,9 @@ function updateDrops() {
     ctx.moveTo(drop.x, drop.y);
     ctx.lineTo(drop.x, drop.y + drop.length);
     ctx.stroke();
-
-    const puddleTop = canvas.height - canvas.height * 0.1 - puddleHeight;
-    if (
-      drop.y + drop.length > puddleTop &&
-      drop.x > cloudX - cloudWidth / 2 &&
-      drop.x < cloudX + cloudWidth / 2
-    ) {
-      puddleHeight = Math.min(puddleHeight + 0.05, canvas.height * 0.1);
+    if (drop.y + drop.length > height - 100 - puddleHeight &&
+        drop.x > cloudX - cloudWidth / 2 && drop.x < cloudX + cloudWidth / 2) {
+      puddleHeight = Math.min(puddleHeight + 0.05, 100);
     }
   });
 }
@@ -69,7 +67,7 @@ function updateVapor() {
     for (let i = 0; i < evaporationSpeed * 2; i++) {
       vaporParticles.push({
         x: cloudX - cloudWidth / 2 + Math.random() * cloudWidth,
-        y: canvas.height - canvas.height * 0.1 - puddleHeight,
+        y: height - puddleHeight - 50,
         alpha: 1,
         rise: Math.random() * 1 + 0.5
       });
@@ -87,13 +85,8 @@ function updateVapor() {
 }
 
 function drawPuddle() {
-  ctx.fillStyle = '#0077aa';
-  ctx.fillRect(
-    cloudX - cloudWidth / 2,
-    canvas.height - canvas.height * 0.1 - puddleHeight,
-    cloudWidth,
-    puddleHeight
-  );
+  ctx.fillStyle = '#57e6f0ea';
+  ctx.fillRect(cloudX - cloudWidth / 2, height - 50 - puddleHeight, cloudWidth, puddleHeight);
 }
 
 function drawVapor() {
@@ -105,8 +98,29 @@ function drawVapor() {
   });
 }
 
+function updateClouds() {
+  const intensity = parseInt(rainIntensitySlider.value);
+  const numVisible = Math.floor(intensity / 20);
+  clouds.forEach((cloud, index) => {
+    if (index < numVisible) {
+      cloud.style.display = 'block';
+      cloud.classList.toggle('storm', intensity >= 80);
+    } else {
+      cloud.style.display = 'none';
+    }
+  });
+}
+
+rainIntensitySlider.addEventListener('input', updateClouds);
+window.addEventListener('resize', () => {
+  width = canvas.width = window.innerWidth;
+  height = canvas.height = window.innerHeight;
+});
+
+updateClouds();
+
 function animate() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.clearRect(0, 0, width, height);
   updateDrops();
   updateVapor();
   drawPuddle();
@@ -114,24 +128,4 @@ function animate() {
   requestAnimationFrame(animate);
 }
 
-// --- Interacción nube: mouse + táctil ---
-cloud.addEventListener('dragstart', e => {
-  e.dataTransfer.setDragImage(new Image(), 0, 0);
-});
-
-document.addEventListener('dragover', e => {
-  e.preventDefault();
-  cloud.style.left = e.pageX - cloud.offsetWidth / 2 + 'px';
-  updateCloudX();
-});
-
-// 👇 Soporte táctil
-cloud.addEventListener('touchstart', e => e.preventDefault());
-document.addEventListener('touchmove', e => {
-  const touch = e.touches[0];
-  cloud.style.left = touch.pageX - cloud.offsetWidth / 2 + 'px';
-  updateCloudX();
-});
-
 animate();
-</script>
